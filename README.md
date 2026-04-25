@@ -42,6 +42,11 @@ All VMs are connected on a private LAN (`192.168.100.0/24`) with a bridged netwo
 - Created custom `snort3_rules.xml` and `snort3_decoders.xml` to parse and categorize Snort 3 alerts by attack type and severity
 - All alerts successfully forwarded to and displayed in the Wazuh dashboard
 
+![Wazuh Dashboard Alerts](screenshots/blue-team/wazuh-dashboard.png)
+*Wazuh SIEM dashboard displaying correlated Snort3 IDS alerts from the Snort server agent*
+
+---
+
 ### Snort 3 (IDS/IPS)
 - Compiled and installed Snort 3 from source on Ubuntu Server VM
 - Configured `snort.lua` with community rules (8,496 rules loaded)
@@ -49,17 +54,30 @@ All VMs are connected on a private LAN (`192.168.100.0/24`) with a bridged netwo
 - Integrated with Wazuh agent using `snort-fast` log format
 - Configured as a systemd service (`snort3.service`) for auto-start on boot
 
+![Snort Alerts](screenshots/blue-team/snort-alerts.png)
+*Snort3 alert_fast.txt showing detected attacks including port scans and ARP spoofing*
+
+---
+
 ### Suricata (NIDS)
 - Installed Suricata on the Kali Agent VM
 - Configured `suricata.yaml` with correct HOME_NET subnet and network interface
 - Created custom ICMP detection rule for lab environment
 - Integrated with Wazuh using `eve.json` log format and JSON decoder
 
+![Suricata Configuration](screenshots/blue-team/suricata-config.png)
+*Suricata suricata.yaml configuration showing HOME_NET and interface settings*
+
+![Suricata Alerts in Wazuh](screenshots/blue-team/suricata-alerts.png)
+*Suricata alerts successfully forwarded and displayed inside the Wazuh SIEM dashboard*
+
 ---
 
 ## 🔴 Red Team — Attack Simulation
 
 All attacks were launched from the attacker VM (`192.168.100.20`) against the victim VM (`192.168.100.10`) and detected by **Snort 3** or **Suricata**, with alerts correlated in the **Wazuh SIEM** dashboard.
+
+---
 
 ### 1. 🔍 Network Reconnaissance (Nmap)
 - **Tool:** Nmap
@@ -71,13 +89,23 @@ All attacks were launched from the attacker VM (`192.168.100.20`) against the vi
   ```
 - **Result:** Discovered open ports — FTP (21), SSH (22), HTTP (80) — and identified target OS as Linux 4.15-5.19
 
+![Nmap Scan](screenshots/red-team/nmap-scan.png)
+*Nmap OS fingerprint revealing 3 open services and Linux OS details on the victim VM*
+
+---
+
 ### 2. 🔑 SSH Brute Force (Hydra)
 - **Tool:** Hydra + rockyou.txt wordlist
 - **Command:**
   ```bash
   hydra -l root -P /usr/share/wordlists/rockyou.txt 192.168.100.10 ssh -t 4 -V
   ```
-- **Result:** 14,344,399 password attempts launched against SSH service on port 22, detected by Suricata as invalid SSH attempts
+- **Result:** 14,344,399 password attempts launched against SSH on port 22, detected by Suricata as invalid SSH attempts
+
+![Hydra SSH Brute Force](screenshots/red-team/hydra-ssh.png)
+*Hydra brute force attack against SSH service with Suricata alert correlation in Wazuh*
+
+---
 
 ### 3. 💥 SYN Flood DoS (hping3)
 - **Tool:** hping3
@@ -85,7 +113,12 @@ All attacks were launched from the attacker VM (`192.168.100.20`) against the vi
   ```bash
   hping3 -S --flood -V -p 80 192.168.100.10
   ```
-- **Result:** 343,551 packets transmitted to port 80, causing 100% packet loss on the target, triggering over 10,000 alerts in Wazuh
+- **Result:** 343,551 packets transmitted to port 80, causing 100% packet loss, triggering thousands of alerts in Wazuh
+
+![SYN Flood DoS](screenshots/red-team/syn-flood.png)
+*hping3 SYN flood transmitting 343,551 packets to the victim's web server on port 80*
+
+---
 
 ### 4. 🕵️ ARP Spoofing (arpspoof)
 - **Tool:** arpspoof
@@ -95,13 +128,23 @@ All attacks were launched from the attacker VM (`192.168.100.20`) against the vi
   ```
 - **Result:** Victim's ARP cache poisoned, redirecting network traffic through the attacker VM — Man-in-the-Middle (MitM) attack successfully executed and detected by Snort
 
+![ARP Spoofing](screenshots/red-team/arp-spoof.png)
+*ARP spoof poisoning the victim's ARP cache to intercept network traffic (MitM attack)*
+
+---
+
 ### 5. 🌐 Nikto Web Scan
 - **Tool:** Nikto
 - **Command:**
   ```bash
   nikto -h 192.168.100.10
   ```
-- **Result:** Identified Apache 2.4.66 server with multiple misconfigurations — missing X-Frame-Options and X-Content-Type headers, exposed HTTP methods, and CVE-2003-1418 (information disclosure / XSS vulnerability)
+- **Result:** Identified Apache 2.4.66 with multiple misconfigurations — missing security headers, exposed HTTP methods, and CVE-2003-1418 (XSS vulnerability)
+
+![Nikto Web Scan](screenshots/red-team/nikto-scan.png)
+*Nikto identifying Apache misconfigurations including missing security headers and XSS vulnerability*
+
+---
 
 ### 6. 📁 FTP Brute Force (Hydra)
 - **Tool:** Hydra + rockyou.txt wordlist
@@ -110,6 +153,9 @@ All attacks were launched from the attacker VM (`192.168.100.20`) against the vi
   hydra -l root -P /usr/share/wordlists/rockyou.txt 192.168.100.10 ftp -t 4 -V
   ```
 - **Result:** Brute force credential attack against FTP service on port 21, detected and alerted by Suricata in Wazuh
+
+![FTP Brute Force](screenshots/red-team/ftp-brute.png)
+*Hydra FTP brute force attack with corresponding Suricata alerts in Wazuh dashboard*
 
 ---
 
