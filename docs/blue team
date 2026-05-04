@@ -1,0 +1,195 @@
+# 🔵 Blue Team — Defensive Setup
+
+## Defense Summary
+
+In this project, the blue team designed and implemented a multi-layered defensive environment across multiple virtual machines to simulate a realistic enterprise network. We deployed Wazuh as our centralized SIEM to aggregate, correlate, and analyze security events, providing real-time visibility into system and network activity. To strengthen network-based threat detection, we integrated both Snort and Suricata as IDS solutions. We also developed a comprehensive custom Snort ruleset tailored to our lab environment, which streamlined alert categorization and improved log readability when ingested into Wazuh.
+
+---
+
+## Wazuh SIEM
+
+### Installation
+
+We installed Wazuh on the SIEM VM using the quickstart installation script from the Wazuh website:
+
+```bash
+curl -sO https://packages.wazuh.com/4.14/wazuh-install.sh && sudo bash ./wazuh-install.sh -a
+```
+
+This installs all 3 components of Wazuh: the **indexer**, **manager**, and **dashboard**. After installation, admin credentials are displayed — make sure to save these for dashboard login.
+
+![Wazuh Dashboard](../screenshots/blue-team/wazuh-dashboard.png)
+*Wazuh SIEM dashboard displaying correlated alerts*
+
+### Agent Installation
+
+To install agents on other VMs, navigate to **Deploy New Agents** on the Wazuh dashboard and fill out the agent information. Copy the generated command and paste it into the target VM's terminal. Then enable and start the agent:
+
+```bash
+sudo systemctl enable wazuh-agent
+sudo systemctl start wazuh-agent
+```
+
+![Active Agents](../screenshots/blue-team/wazuh-agents.png)
+*All agents successfully connected and active in Wazuh*
+
+### Custom Snort Rules
+
+We created a custom `snort3_rules.xml` file on the Wazuh Manager VM with rules tailored to our environment. Each rule has a specific description based on the attack type and a severity level:
+
+```xml
+<group name="snort,">
+  <rule id="100200" level="6">
+    <decoded_as>snort3</decoded_as>
+    <description>Snort3 IDS alert detected</description>
+  </rule>
+  <rule id="100202" level="12">
+    <if_sid>100201</if_sid>
+    <match>port_scan</match>
+    <description>Snort3: Port scan from attacker VM 192.168.100.20</description>
+  </rule>
+</group>
+```
+
+> Full rules file: [snort3_rules.xml](../rules/snort3_rules.xml)
+
+![Snort Rules Alert](../screenshots/blue-team/snort-alerts.png)
+*Successful port scan alert captured by Snort and displayed in Wazuh*
+
+---
+
+## Suricata (NIDS)
+
+### Installation
+
+```bash
+sudo apt install suricata -y
+```
+
+### Configuration
+
+Edit the Suricata config file to set your network and interface:
+
+```bash
+sudo nano /etc/suricata/suricata.yaml
+```
+
+Key settings to update:
+- Set `HOME_NET` to your LAN subnet: `[192.168.100.0/24]`
+- Set the interface under `af-packet` to match your bridged adapter (e.g. `enp0s8`)
+
+![Suricata Config](../screenshots/blue-team/suricata-config.png)
+*suricata.yaml showing HOME_NET and interface configuration*
+
+### Validate Configuration
+
+```bash
+suricata -T -c /etc/suricata/suricata.yaml
+```
+
+You should see a `Configuration provided was successfully loaded` message.
+
+### Custom ICMP Rule
+
+We created a custom rule to detect any ICMP ping to the agent VM:
+
+```
+alert icmp any any -> $HOME_NET any (msg:"ICMP Ping Detected"; sid:1; rev:1;)
+```
+
+Add this to `/var/lib/suricata/rules/local.rules` and reference it in the yaml rules-files section.
+
+### Wazuh Integration
+
+In the Wazuh agent `ossec.conf` file, add the Suricata log path with JSON format:
+
+```xml
+<localfile>
+  <log_format>json</log_format>
+  <location>/var/log/suricata/eve.json</location>
+</localfile>
+```
+
+Restart both Suricata and the Wazuh agent after making changes.
+
+![Suricata Alerts in Wazuh](../screenshots/blue-team/suricata-alerts.png)
+*Suricata alerts successfully forwarded to the Wazuh SIEM dashboard*
+
+---
+
+## Snort 3 (IDS/IPS)
+
+### Installation
+
+Snort 3 was compiled from source on the Ubuntu Server VM. We first installed all dependencies, then installed LibDAQ, and finally compiled and installed Snort 3.
+
+![Snort Installation](../screenshots/blue-team/snort-install.png)
+*Successful installation of LibDAQ and Snort 3*
+
+### Configuration
+
+We configured `snort.lua` with the community rules (8,496 rules loaded) and enabled `alert_fast` output logging:
+
+```lua
+alert_fast =
+{
+    file = true,
+    packet = false,
+    limit = 10,
+}
+```
+
+![Snort Rules Validation](../screenshots/blue-team/snort-rules.png)
+*Validation of 8,496 pre-configured community rules*
+
+### Running as a Service
+
+We configured Snort 3 to start automatically on boot using systemd:
+
+```bash
+sudo nano /etc/systemd/system/snort3.service
+```
+
+```ini
+[Unit]
+Description=Snort3 NIDS
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/snort -c /usr/local/etc/snort/snort.lua -i enp0s3 -A alert_fast -l /var/log/snort
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable snort3
+sudo systemctl start snort3
+```
+
+### Wazuh Integration
+
+We installed the Wazuh agent on the Snort Server and configured it to read the Snort alert file:
+
+```xml
+<localfile>
+  <log_format>snort-fast</log_format>
+  <location>/var/log/snort/alert_fast.txt</location>
+</localfile>
+```
+
+We also created a custom decoder on the Wazuh Manager VM:
+
+```xml
+<decoder name="snort3">
+  <prematch>[**]</prematch>
+</decoder>
+```
+
+![Snort Alert in Wazuh](../screenshots/blue-team/snort-wazuh.png)
+*Successful Snort port scan alert forwarded and displayed in Wazuh*
