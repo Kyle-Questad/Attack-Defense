@@ -58,7 +58,7 @@ Attack-Defense-SOC-Lab/
 
 We deployed Wazuh as our centralized SIEM to aggregate, correlate, and analyze security events, providing real-time visibility into system and network activity. We integrated both Snort 3 and Suricata as IDS solutions, and developed a comprehensive custom Snort ruleset tailored to our lab environment, improving alert categorization and log readability within Wazuh.
 
-→ [Full Blue Team Walkthrough](docs/2-blue-team.md)
+
 
 ---
 
@@ -75,7 +75,6 @@ All attacks were launched from the attacker VM (`192.168.100.20`) against the vi
 | Web Vulnerability Scan | Nikto | Snort 3 |
 | FTP Brute Force | Hydra | Suricata |
 
-→ [Full Red Team Walkthrough](docs/3-red-team.md)
 
 ---
 
