@@ -93,9 +93,8 @@ All attacks were launched from the attacker VM (`192.168.100.20`) against the vi
 | Nikto | Web vulnerability scanning |
 | VirtualBox | VM hypervisor |
 
-## HERE IS OUR ORIGINAL WRITE UP !!
-
-
+# Here Is Our Original Write up
+Attack & Defense Project.pdf
 
 ## 📚 Resources
 
