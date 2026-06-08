@@ -94,7 +94,7 @@ All attacks were launched from the attacker VM (`192.168.100.20`) against the vi
 | VirtualBox | VM hypervisor |
 
 # Here Is Our Original Write up!
-(Attack & Defense Project.pdf)
+(file:///C:/Users/Kyleq/OneDrive%20-%20Grand%20Canyon%20University/Summer2026/Attack%20&%20Defense%20Project.pdf)
 
 ## 📚 Resources
 
