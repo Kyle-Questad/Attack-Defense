@@ -34,26 +34,6 @@ All VMs are connected on a private LAN (`192.168.100.0/24`) with a bridged netwo
 
 ---
 
-## 📁 Repository Structure
-
-```
-Attack-Defense-SOC-Lab/
-├── README.md                        ← Project overview (this file)
-├── docs/
-│   ├── 1-network-setup.md           ← VM and LAN configuration
-│   ├── 2-blue-team.md               ← Wazuh, Snort, Suricata setup
-│   ├── 3-red-team.md                ← Attack walkthrough
-│   └── 4-problems-encountered.md   ← Issues and fixes
-├── rules/
-│   ├── snort3_rules.xml             ← Custom Snort detection rules
-│   └── snort3_decoders.xml          ← Custom Wazuh Snort decoder
-└── screenshots/
-    ├── blue-team/                   ← Defensive tool screenshots
-    └── red-team/                    ← Attack screenshots
-```
-
----
-
 ## 🔵 Blue Team Summary
 
 We deployed Wazuh as our centralized SIEM to aggregate, correlate, and analyze security events, providing real-time visibility into system and network activity. We integrated both Snort 3 and Suricata as IDS solutions, and developed a comprehensive custom Snort ruleset tailored to our lab environment, improving alert categorization and log readability within Wazuh.
